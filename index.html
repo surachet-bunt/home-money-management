@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home Money Management</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Supabase JS Library -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Prompt', sans-serif; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen p-4">
+
+    <div class="max-w-5xl mx-auto p-2 md:p-6">
+        <!-- Header & Filter -->
+        <header class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
+            <div>
+                <h1 class="text-3xl font-bold text-slate-900">Home Money Management</h1>
+                <p class="text-slate-500 mt-1">ระบบจัดการเงินในบ้าน (เชื่อมต่อ Supabase)</p>
+            </div>
+            <!-- ตัวเลือกกรองข้อมูลรายเดือน / รายปี -->
+            <div class="flex items-center gap-2 bg-white p-2 rounded-2xl shadow-sm border border-slate-100">
+                <select id="filter-month" onchange="fetchTransactions()" class="bg-transparent text-sm font-medium text-slate-700 focus:outline-none px-2 py-1">
+                    <option value="all">ทุกเดือน</option>
+                    <option value="01">มกราคม</option>
+                    <option value="02">กุมภาพันธ์</option>
+                    <option value="03">มีนาคม</option>
+                    <option value="04">เมษายน</option>
+                    <option value="05">พฤษภาคม</option>
+                    <option value="06">มิถุนายน</option>
+                    <option value="07">กรกฎาคม</option>
+                    <option value="08">สิงหาคม</option>
+                    <option value="09">กันยายน</option>
+                    <option value="10">ตุลาคม</option>
+                    <option value="11">พฤศจิกายน</option>
+                    <option value="12">ธันวาคม</option>
+                </select>
+                <select id="filter-year" onchange="fetchTransactions()" class="bg-transparent text-sm font-medium text-slate-700 focus:outline-none px-2 py-1 border-l border-slate-200">
+                    <option value="2026">2026</option>
+                    <option value="2025">2025</option>
+                </select>
+            </div>
+        </header>
+
+        <!-- Summary Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                <p class="text-sm text-slate-500 font-medium">ยอดเงินคงเหลือ</p>
+                <h3 id="net-balance" class="text-2xl font-bold text-slate-900 mt-1">0.00 บาท</h3>
+            </div>
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                <p class="text-sm text-emerald-600 font-medium">รายรับรวม</p>
+                <h3 id="total-income" class="text-2xl font-bold text-emerald-600 mt-1">0.00 บาท</h3>
+            </div>
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                <p class="text-sm text-rose-600 font-medium">รายจ่ายรวม</p>
+                <h3 id="total-expense" class="text-2xl font-bold text-rose-600 mt-1">0.00 บาท</h3>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <!-- Form Section -->
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 md:col-span-1 h-fit">
+                <h2 class="text-lg font-semibold mb-4 text-slate-900">เพิ่มรายการใหม่</h2>
+                <form id="transaction-form" onsubmit="addTransaction(event)" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-600 mb-1">ประเภท</label>
+                        <select id="type" class="w-full rounded-xl border border-slate-200 p-2.5 text-sm focus:outline-none focus:border-indigo-500">
+                            <option value="income">รายรับ (เงินเดือน/อื่นๆ)</option>
+                            <option value="expense">รายจ่ายทั่วไป</option>
+                            <option value="recurring">ค่าใช้จ่ายรายเดือน (บิล)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-600 mb-1">ชื่อรายการ / รายละเอียด</label>
+                        <input type="text" id="description" required placeholder="เช่น เงินเดือน, ค่าอาหาร, ค่าเน็ต" class="w-full rounded-xl border border-slate-200 p-2.5 text-sm focus:outline-none focus:border-indigo-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-600 mb-1">จำนวนเงิน (บาท)</label>
+                        <input type="number" id="amount" step="0.01" required placeholder="0.00" class="w-full rounded-xl border border-slate-200 p-2.5 text-sm focus:outline-none focus:border-indigo-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-600 mb-1">วันที่</label>
+                        <input type="date" id="date" required class="w-full rounded-xl border border-slate-200 p-2.5 text-sm focus:outline-none focus:border-indigo-500">
+                    </div>
+                    <button type="submit" id="submit-btn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 rounded-xl transition text-sm">
+                        บันทึกข้อมูล
+                    </button>
+                </form>
+            </div>
+
+            <!-- List Section -->
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 md:col-span-2">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-lg font-semibold text-slate-900">ประวัติรายการ</h2>
+                    <span id="item-count" class="text-xs text-slate-400 bg-slate-50 px-2.5 py-1 rounded-full">กำลังโหลด...</span>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="border-b border-slate-100 text-slate-400 text-xs uppercase tracking-wider">
+                                <th class="pb-3 font-semibold">วันที่</th>
+                                <th class="pb-3 font-semibold">รายการ</th>
+                                <th class="pb-3 font-semibold">ประเภท</th>
+                                <th class="pb-3 font-semibold text-right">จำนวนเงิน</th>
+                            </tr>
+                        </thead>
+                        <tbody id="transaction-list" class="divide-y divide-slate-50 text-sm">
+                            <!-- ข้อมูลจะดึงมาจาก Supabase -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // === ตั้งค่าการเชื่อมต่อ Supabase ของคุณที่นี่ ===
+        const SUPABASE_URL = 'YOUR_SUPABASE_URL';       // คัดลอก Project URL จาก Supabase
+        const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY'; // คัดลอก anon public key จาก Supabase
+        
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // ตั้งค่าวันที่เริ่มต้นเป็นปัจจุบัน
+        const now = new Date();
+        document.getElementById('date').valueAsDate = now;
+        document.getElementById('filter-month').value = String(now.getMonth() + 1).padStart(2, '0');
+        document.getElementById('filter-year').value = String(now.getFullYear());
+
+        // ฟังก์ชันดึงข้อมูลจาก Supabase มาแสดงผล
+        async function fetchTransactions() {
+            const selectedMonth = document.getElementById('filter-month').value;
+            const selectedYear = document.getElementById('filter-year').value;
+
+            let query = supabase.from('transactions').select('*').order('transaction_date', { ascending: false });
+
+            // หากมีการเลือกfiltter เดือน/ปี
+            if (selectedYear !== 'all' && selectedMonth !== 'all') {
+                const startDate = `${selectedYear}-${selectedMonth}-01`;
+                // หา วันสิ้นเดือนแบบง่าย
+                const lastDay = new Date(selectedYear, selectedMonth, 0).getDate();
+                const endDate = `${selectedYear}-${selectedMonth}-${lastDay}`;
+                query = query.gte('transaction_date', startDate).lte('transaction_date', endDate);
+            } else if (selectedYear !== 'all') {
+                query = query.gte('transaction_date', `${selectedYear}-01-01`).lte('transaction_date', `${selectedYear}-12-31`);
+            }
+
+            const { data, error } = await query;
+
+            if (error) {
+                console.error('Error fetching data:', error);
+                alert('ไม่สามารถดึงข้อมูลได้');
+                return;
+            }
+
+            renderTable(data);
+        }
+
+        // ฟังก์ชันเรนเดอร์ข้อมูลลงตารางและคำนวณยอด
+        function renderTable(transactions) {
+            const listEl = document.getElementById('transaction-list');
+            listEl.innerHTML = '';
+
+            let totalIncome = 0;
+            let totalExpense = 0;
+
+            transactions.forEach(item => {
+                const isIncome = item.type === 'income';
+                const amountClass = isIncome ? 'text-emerald-600' : 'text-rose-600';
+                const prefix = isIncome ? '+' : '-';
+                
+                if (isIncome) {
+                    totalIncome += Number(item.amount);
+                } else {
+                    totalExpense += Number(item.amount);
+                }
+
+                const typeLabels = {
+                    income: '<span class="bg-emerald-50 text-emerald-600 px-2 py-1 rounded-md text-xs font-medium">รายรับ</span>',
+                    expense: '<span class="bg-rose-50 text-rose-600 px-2 py-1 rounded-md text-xs font-medium">รายจ่าย</span>',
+                    recurring: '<span class="bg-amber-50 text-amber-600 px-2 py-1 rounded-md text-xs font-medium">รายเดือน</span>'
+                };
+
+                const row = `
+                    <tr class="hover:bg-slate-50/50">
+                        <td class="py-3 text-slate-500 text-xs">${item.transaction_date}</td>
+                        <td class="py-3 font-medium text-slate-700">${item.description}</td>
+                        <td class="py-3">${typeLabels[item.type]}</td>
+                        <td class="py-3 text-right font-semibold ${amountClass}">${prefix}${Number(item.amount).toLocaleString('th-TH', {minimumFractionDigits: 2})}</td>
+                    </tr>
+                `;
+                listEl.innerHTML += row;
+            });
+
+            if (transactions.length === 0) {
+                listEl.innerHTML = `<tr><td colspan="4" class="text-center py-6 text-slate-400">ยังไม่มีข้อมูลในระบบ</td></tr>`;
+            }
+
+            // อัปเดตตัวเลขสรุปผล
+            document.getElementById('total-income').innerText = totalIncome.toLocaleString('th-TH', {minimumFractionDigits: 2}) + ' บาท';
+            document.getElementById('total-expense').innerText = totalExpense.toLocaleString('th-TH', {minimumFractionDigits: 2}) + ' บาท';
+            
+            const net = totalIncome - totalExpense;
+            const netEl = document.getElementById('net-balance');
+            netEl.innerText = net.toLocaleString('th-TH', {minimumFractionDigits: 2}) + ' บาท';
+            netEl.className = `text-2xl font-bold mt-1 ${net >= 0 ? 'text-slate-900' : 'text-rose-600'}`;
+            
+            document.getElementById('item-count').innerText = `พบ ${transactions.length} รายการ`;
+        }
+
+        // ฟังก์ชันบันทึกข้อมูลลง Supabase
+        async function addTransaction(e) {
+            e.preventDefault();
+            
+            const submitBtn = document.getElementById('submit-btn');
+            submitBtn.disabled = true;
+            submitBtn.innerText = 'กำลังบันทึก...';
+
+            const newItem = {
+                type: document.getElementById('type').value,
+                description: document.getElementById('description').value,
+                amount: parseFloat(document.getElementById('amount').value),
+                transaction_date: document.getElementById('date').value
+            };
+
+            const { error } = await supabase.from('transactions').insert([newItem]);
+
+            if (error) {
+                console.error('Error inserting data:', error);
+                alert('เกิดข้อผิดพลาดในการบันทึกข้อมูล');
+            } else {
+                // เคลียร์ฟอร์ม
+                document.getElementById('description').value = '';
+                document.getElementById('amount').value = '';
+                
+                // โหลดข้อมูลใหม่
+                fetchTransactions();
+            }
+
+            submitBtn.disabled = false;
+            submitBtn.innerText = 'บันทึกข้อมูล';
+        }
+
+        // โหลดข้อมูลเมื่อเปิดเว็บครั้งแรก
+        fetchTransactions();
+    </script>
+</body>
+</html>
