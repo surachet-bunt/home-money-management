@@ -120,8 +120,8 @@
 
     <script>
         // === ตั้งค่าการเชื่อมต่อ Supabase ของคุณที่นี่ ===
-        const SUPABASE_URL = 'https://tuapmbxwkibobxwmadih.supabase.co';       // คัดลอก Project URL จาก Supabase
-        const SUPABASE_ANON_KEY = 'sb_publishable_UNPj_koVoRXl92tjbAUVMg_e35WSDQF'; // คัดลอก anon public key จาก Supabase
+        const SUPABASE_URL = 'https://tuapmbxwkibobxwmadih.supabase.co';       
+        const SUPABASE_ANON_KEY = 'sb_publishable_UNPj_koVoRXl92tjbAUVMg_e35WSDQF'; 
         
         const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
@@ -138,10 +138,8 @@
 
             let query = supabase.from('transactions').select('*').order('transaction_date', { ascending: false });
 
-            // หากมีการเลือกfiltter เดือน/ปี
             if (selectedYear !== 'all' && selectedMonth !== 'all') {
                 const startDate = `${selectedYear}-${selectedMonth}-01`;
-                // หา วันสิ้นเดือนแบบง่าย
                 const lastDay = new Date(selectedYear, selectedMonth, 0).getDate();
                 const endDate = `${selectedYear}-${selectedMonth}-${lastDay}`;
                 query = query.gte('transaction_date', startDate).lte('transaction_date', endDate);
@@ -153,7 +151,6 @@
 
             if (error) {
                 console.error('Error fetching data:', error);
-                alert('ไม่สามารถดึงข้อมูลได้');
                 return;
             }
 
@@ -200,7 +197,6 @@
                 listEl.innerHTML = `<tr><td colspan="4" class="text-center py-6 text-slate-400">ยังไม่มีข้อมูลในระบบ</td></tr>`;
             }
 
-            // อัปเดตตัวเลขสรุปผล
             document.getElementById('total-income').innerText = totalIncome.toLocaleString('th-TH', {minimumFractionDigits: 2}) + ' บาท';
             document.getElementById('total-expense').innerText = totalExpense.toLocaleString('th-TH', {minimumFractionDigits: 2}) + ' บาท';
             
@@ -231,13 +227,10 @@
 
             if (error) {
                 console.error('Error inserting data:', error);
-                alert('เกิดข้อผิดพลาดในการบันทึกข้อมูล');
+                alert('เกิดข้อผิดพลาดในการบันทึกข้อมูล: ' + error.message);
             } else {
-                // เคลียร์ฟอร์ม
                 document.getElementById('description').value = '';
                 document.getElementById('amount').value = '';
-                
-                // โหลดข้อมูลใหม่
                 fetchTransactions();
             }
 
