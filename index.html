@@ -123,7 +123,8 @@
         const SUPABASE_URL = 'https://tuapmbxwkibobxwmadih.supabase.co';       
         const SUPABASE_ANON_KEY = 'sb_publishable_UNPj_koVoRXl92tjbAUVMg_e35WSDQF'; 
         
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        // เปลี่ยนชื่อตัวแปรเป็น sbClient เพื่อป้องกันการประกาศซ้ำกับระบบภายใน
+        const sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         // ตั้งค่าวันที่เริ่มต้นเป็นปัจจุบัน
         const now = new Date();
@@ -136,7 +137,7 @@
             const selectedMonth = document.getElementById('filter-month').value;
             const selectedYear = document.getElementById('filter-year').value;
 
-            let query = supabase.from('transactions').select('*').order('transaction_date', { ascending: false });
+            let query = sbClient.from('transactions').select('*').order('transaction_date', { ascending: false });
 
             if (selectedYear !== 'all' && selectedMonth !== 'all') {
                 const startDate = `${selectedYear}-${selectedMonth}-01`;
@@ -223,7 +224,7 @@
                 transaction_date: document.getElementById('date').value
             };
 
-            const { error } = await supabase.from('transactions').insert([newItem]);
+            const { error } = await sbClient.from('transactions').insert([newItem]);
 
             if (error) {
                 console.error('Error inserting data:', error);
