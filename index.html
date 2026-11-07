@@ -8,47 +8,53 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Supabase JS Library -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- Chart.js for Charts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Prompt', sans-serif; }
     </style>
 </head>
-<body class="bg-slate-50 text-slate-800 min-h-screen flex items-center justify-center p-4">
+<body class="bg-slate-100 text-slate-800 min-h-screen flex items-center justify-center p-2 md:p-6">
 
     <!-- ส่วนที่ 1: หน้าจอเข้าสู่ระบบ (Login Screen) -->
-    <div id="auth-container" class="w-full max-w-md bg-white p-8 rounded-2xl shadow-sm border border-slate-100 hidden">
+    <div id="auth-container" class="w-full max-w-md bg-white p-8 rounded-3xl shadow-xl border border-slate-100 hidden">
         <div class="text-center mb-6">
+            <div class="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-3 font-bold text-xl shadow-inner">💰</div>
             <h1 class="text-2xl font-bold text-slate-900">Home Money</h1>
-            <p class="text-slate-500 text-sm mt-1">กรุณาเข้าสู่ระบบเพื่อจัดการการเงิน</p>
+            <p class="text-slate-400 text-sm mt-1">กรุณาเข้าสู่ระบบเพื่อจัดการการเงิน</p>
         </div>
         <form onsubmit="handleLogin(event)" class="space-y-4">
             <div>
-                <label class="block text-sm font-medium text-slate-600 mb-1">อีเมล</label>
-                <input type="email" id="login-email" required placeholder="name@example.com" class="w-full rounded-xl border border-slate-200 p-2.5 text-sm focus:outline-none focus:border-indigo-500">
+                <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">อีเมล</label>
+                <input type="email" id="login-email" required placeholder="name@example.com" class="w-full rounded-xl border border-slate-200 bg-slate-50/50 p-3 text-sm focus:outline-none focus:border-indigo-500 focus:bg-white transition">
             </div>
             <div>
-                <label class="block text-sm font-medium text-slate-600 mb-1">รหัสผ่าน</label>
-                <input type="password" id="login-password" required placeholder="••••••••" class="w-full rounded-xl border border-slate-200 p-2.5 text-sm focus:outline-none focus:border-indigo-500">
+                <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">รหัสผ่าน</label>
+                <input type="password" id="login-password" required placeholder="••••••••" class="w-full rounded-xl border border-slate-200 bg-slate-50/50 p-3 text-sm focus:outline-none focus:border-indigo-500 focus:bg-white transition">
             </div>
-            <button type="submit" id="login-btn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 rounded-xl transition text-sm">
+            <button type="submit" id="login-btn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 rounded-xl shadow-lg shadow-indigo-100 transition text-sm">
                 เข้าสู่ระบบ
             </button>
-            <p id="auth-error" class="text-rose-600 text-xs text-center mt-2"></p>
+            <p id="auth-error" class="text-rose-600 text-xs text-center mt-2 font-medium"></p>
         </form>
     </div>
 
-    <!-- ส่วนที่ 2: หน้าจอหลักจัดการการเงิน (แสดงเมื่อ Login แล้ว) -->
-    <div id="app-container" class="w-full max-w-5xl mx-auto p-2 md:p-6 hidden">
-        <!-- Header & Filter -->
-        <header class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
-            <div>
-                <h1 class="text-3xl font-bold text-slate-900">Home Money Management</h1>
-                <p class="text-slate-500 mt-1">ระบบจัดการเงินในบ้าน</p>
+    <!-- ส่วนที่ 2: หน้าจอหลักจัดการการเงิน -->
+    <div id="app-container" class="w-full max-w-6xl mx-auto space-y-6 hidden">
+        
+        <!-- Header & Filter Bar -->
+        <header class="bg-white p-5 rounded-3xl shadow-sm border border-slate-100 flex flex-col md:flex-row justify-between items-center gap-4">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-indigo-600 text-white rounded-2xl flex items-center justify-center font-bold text-lg shadow-md shadow-indigo-100">🏠</div>
+                <div>
+                    <h1 class="text-xl font-bold text-slate-900">Home Money Management</h1>
+                    <p class="text-slate-400 text-xs">ระบบบันทึกและวิเคราะห์การเงินในบ้าน</p>
+                </div>
             </div>
-            <div class="flex items-center gap-4">
-                <!-- ตัวเลือกกรองข้อมูลรายเดือน / รายปี -->
-                <div class="flex items-center gap-2 bg-white p-2 rounded-2xl shadow-sm border border-slate-100">
-                    <select id="filter-month" onchange="fetchTransactions()" class="bg-transparent text-sm font-medium text-slate-700 focus:outline-none px-2 py-1">
+            <div class="flex flex-wrap items-center gap-3 w-full md:w-auto justify-end">
+                <div class="flex items-center gap-2 bg-slate-50 p-1.5 rounded-2xl border border-slate-200/60">
+                    <select id="filter-month" onchange="fetchTransactions()" class="bg-transparent text-xs font-semibold text-slate-600 focus:outline-none px-2 py-1">
                         <option value="all">ทุกเดือน</option>
                         <option value="01">มกราคม</option>
                         <option value="02">กุมภาพันธ์</option>
@@ -63,85 +69,103 @@
                         <option value="11">พฤศจิกายน</option>
                         <option value="12">ธันวาคม</option>
                     </select>
-                    <select id="filter-year" onchange="fetchTransactions()" class="bg-transparent text-sm font-medium text-slate-700 focus:outline-none px-2 py-1 border-l border-slate-200">
+                    <select id="filter-year" onchange="fetchTransactions()" class="bg-transparent text-xs font-semibold text-slate-600 focus:outline-none px-2 py-1 border-l border-slate-200">
                         <option value="2026">2026</option>
                         <option value="2025">2025</option>
                     </select>
                 </div>
-                <button onclick="handleLogout()" class="bg-slate-100 hover:bg-rose-50 hover:text-rose-600 text-slate-600 px-4 py-2 rounded-xl text-sm font-medium transition">
+                <button onclick="handleLogout()" class="bg-slate-50 hover:bg-rose-50 hover:text-rose-600 text-slate-500 px-4 py-2 rounded-2xl text-xs font-semibold border border-slate-200/60 transition">
                     ออกจากระบบ
                 </button>
             </div>
         </header>
 
         <!-- Summary Cards -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-                <p class="text-sm text-slate-500 font-medium">ยอดเงินคงเหลือ</p>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="bg-white p-5 rounded-3xl shadow-sm border border-slate-100 relative overflow-hidden">
+                <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">ยอดเงินคงเหลือ</p>
                 <h3 id="net-balance" class="text-2xl font-bold text-slate-900 mt-1">0.00 บาท</h3>
+                <div class="absolute -right-4 -bottom-4 w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center text-2xl opacity-50">💳</div>
             </div>
-            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-                <p class="text-sm text-emerald-600 font-medium">รายรับรวม</p>
+            <div class="bg-white p-5 rounded-3xl shadow-sm border border-slate-100 relative overflow-hidden">
+                <p class="text-xs font-semibold text-emerald-600 uppercase tracking-wider">รายรับรวม</p>
                 <h3 id="total-income" class="text-2xl font-bold text-emerald-600 mt-1">0.00 บาท</h3>
+                <div class="absolute -right-4 -bottom-4 w-20 h-20 bg-emerald-50 rounded-full flex items-center justify-center text-2xl opacity-50">📈</div>
             </div>
-            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-                <p class="text-sm text-rose-600 font-medium">รายจ่ายรวม</p>
+            <div class="bg-white p-5 rounded-3xl shadow-sm border border-slate-100 relative overflow-hidden">
+                <p class="text-xs font-semibold text-rose-600 uppercase tracking-wider">รายจ่ายรวม</p>
                 <h3 id="total-expense" class="text-2xl font-bold text-rose-600 mt-1">0.00 บาท</h3>
+                <div class="absolute -right-4 -bottom-4 w-20 h-20 bg-rose-50 rounded-full flex items-center justify-center text-2xl opacity-50">📉</div>
             </div>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <!-- Form Section -->
-            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 md:col-span-1 h-fit">
-                <h2 class="text-lg font-semibold mb-4 text-slate-900">เพิ่มรายการใหม่</h2>
-                <form id="transaction-form" onsubmit="addTransaction(event)" class="space-y-4">
+        <!-- Main Content Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            
+            <!-- Left: Form Input -->
+            <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 h-fit space-y-4">
+                <h2 class="text-base font-bold text-slate-900 border-b border-slate-100 pb-3">➕ เพิ่มรายการใหม่</h2>
+                <form id="transaction-form" onsubmit="addTransaction(event)" class="space-y-3">
                     <div>
-                        <label class="block text-sm font-medium text-slate-600 mb-1">ประเภท</label>
-                        <select id="type" class="w-full rounded-xl border border-slate-200 p-2.5 text-sm focus:outline-none focus:border-indigo-500">
+                        <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">ประเภท</label>
+                        <select id="type" class="w-full rounded-xl border border-slate-200 bg-slate-50/50 p-2.5 text-xs font-medium text-slate-700 focus:outline-none focus:border-indigo-500 focus:bg-white transition">
                             <option value="income">รายรับ (เงินเดือน/อื่นๆ)</option>
                             <option value="expense">รายจ่ายทั่วไป</option>
                             <option value="recurring">ค่าใช้จ่ายรายเดือน (บิล)</option>
                         </select>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-slate-600 mb-1">ชื่อรายการ / รายละเอียด</label>
-                        <input type="text" id="description" required placeholder="เช่น เงินเดือน, ค่าอาหาร, ค่าเน็ต" class="w-full rounded-xl border border-slate-200 p-2.5 text-sm focus:outline-none focus:border-indigo-500">
+                        <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">ชื่อรายการ</label>
+                        <input type="text" id="description" required placeholder="เช่น เงินเดือน, ค่าอาหาร, ค่าเน็ต" class="w-full rounded-xl border border-slate-200 bg-slate-50/50 p-2.5 text-xs text-slate-700 focus:outline-none focus:border-indigo-500 focus:bg-white transition">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-slate-600 mb-1">จำนวนเงิน (บาท)</label>
-                        <input type="number" id="amount" step="0.01" required placeholder="0.00" class="w-full rounded-xl border border-slate-200 p-2.5 text-sm focus:outline-none focus:border-indigo-500">
+                        <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">จำนวนเงิน (บาท)</label>
+                        <input type="number" id="amount" step="0.01" required placeholder="0.00" class="w-full rounded-xl border border-slate-200 bg-slate-50/50 p-2.5 text-xs text-slate-700 focus:outline-none focus:border-indigo-500 focus:bg-white transition">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-slate-600 mb-1">วันที่</label>
-                        <input type="date" id="date" required class="w-full rounded-xl border border-slate-200 p-2.5 text-sm focus:outline-none focus:border-indigo-500">
+                        <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">วันที่</label>
+                        <input type="date" id="date" required class="w-full rounded-xl border border-slate-200 bg-slate-50/50 p-2.5 text-xs text-slate-700 focus:outline-none focus:border-indigo-500 focus:bg-white transition">
                     </div>
-                    <button type="submit" id="submit-btn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 rounded-xl transition text-sm">
+                    <button type="submit" id="submit-btn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 rounded-xl shadow-lg shadow-indigo-100 transition text-xs mt-2">
                         บันทึกข้อมูล
                     </button>
                 </form>
             </div>
 
-            <!-- List Section -->
-            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 md:col-span-2">
-                <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-lg font-semibold text-slate-900">ประวัติรายการ</h2>
-                    <span id="item-count" class="text-xs text-slate-400 bg-slate-50 px-2.5 py-1 rounded-full">กำลังโหลด...</span>
+            <!-- Right: Charts & Table -->
+            <div class="lg:col-span-2 space-y-6">
+                
+                <!-- Chart Section -->
+                <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
+                    <h2 class="text-base font-bold text-slate-900 mb-4">📊 สรุปสัดส่วนการเงิน</h2>
+                    <div class="relative w-full h-64 flex justify-center items-center">
+                        <canvas id="financeChart"></canvas>
+                    </div>
                 </div>
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left border-collapse">
-                        <thead>
-                            <tr class="border-b border-slate-100 text-slate-400 text-xs uppercase tracking-wider">
-                                <th class="pb-3 font-semibold">วันที่</th>
-                                <th class="pb-3 font-semibold">รายการ</th>
-                                <th class="pb-3 font-semibold">ประเภท</th>
-                                <th class="pb-3 font-semibold text-right">จำนวนเงิน</th>
-                            </tr>
-                        </thead>
-                        <tbody id="transaction-list" class="divide-y divide-slate-50 text-sm">
-                            <!-- ข้อมูลจะดึงมาจาก Supabase -->
-                        </tbody>
-                    </table>
+
+                <!-- Table History Section -->
+                <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
+                    <div class="flex justify-between items-center mb-4 border-b border-slate-100 pb-3">
+                        <h2 class="text-base font-bold text-slate-900">📜 ประวัติรายการ</h2>
+                        <span id="item-count" class="text-xs text-slate-400 bg-slate-50 px-3 py-1 rounded-full font-medium border border-slate-200/60">กำลังโหลด...</span>
+                    </div>
+                    <div class="overflow-x-auto max-h-80 overflow-y-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead class="sticky top-0 bg-white">
+                                <tr class="border-b border-slate-100 text-slate-400 text-[11px] uppercase tracking-wider">
+                                    <th class="pb-2 font-semibold">วันที่</th>
+                                    <th class="pb-2 font-semibold">รายการ</th>
+                                    <th class="pb-2 font-semibold">ประเภท</th>
+                                    <th class="pb-2 font-semibold text-right">จำนวนเงิน</th>
+                                </tr>
+                            </thead>
+                            <tbody id="transaction-list" class="divide-y divide-slate-50 text-xs">
+                                <!-- ข้อมูลจะดึงมาจาก Supabase -->
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
+
             </div>
         </div>
     </div>
@@ -152,17 +176,15 @@
         const SUPABASE_ANON_KEY = 'sb_publishable_UNPj_koVoRXl92tjbAUVMg_e35WSDQF'; 
         
         const sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        let financeChart = null;
 
-        // ตรวจสอบสถานะการล็อกอินเมื่อเปิดหน้าเว็บ
+        // ตรวจสอบสถานะล็อกอิน
         async function checkUser() {
             const { data: { session } } = await sbClient.auth.getSession();
             if (session) {
-                // ล็อกอินแล้ว แสดงหน้าแอป
                 document.getElementById('auth-container').classList.add('hidden');
                 document.getElementById('app-container').classList.remove('hidden');
-                document.body.classList.remove('flex', 'items-center', 'justify-center');
                 
-                // ตั้งค่าเริ่มต้นวันที่
                 const now = new Date();
                 document.getElementById('date').valueAsDate = now;
                 document.getElementById('filter-month').value = String(now.getMonth() + 1).padStart(2, '0');
@@ -170,14 +192,11 @@
 
                 fetchTransactions();
             } else {
-                // ยังไม่ล็อกอิน แสดงหน้าฟอร์ม Login
                 document.getElementById('auth-container').classList.remove('hidden');
                 document.getElementById('app-container').classList.add('hidden');
-                document.body.classList.add('flex', 'items-center', 'justify-center');
             }
         }
 
-        // ฟังก์ชันจัดการการเข้าสู่ระบบ
         async function handleLogin(e) {
             e.preventDefault();
             const email = document.getElementById('login-email').value;
@@ -189,10 +208,7 @@
             loginBtn.innerText = 'กำลังตรวจสอบ...';
             errorEl.innerText = '';
 
-            const { data, error } = await sbClient.auth.signInWithPassword({
-                email: email,
-                password: password,
-            });
+            const { error } = await sbClient.auth.signInWithPassword({ email, password });
 
             if (error) {
                 errorEl.innerText = 'อีเมลหรือรหัสผ่านไม่ถูกต้อง';
@@ -203,13 +219,11 @@
             }
         }
 
-        // ฟังก์ชันออกจากระบบ
         async function handleLogout() {
             await sbClient.auth.signOut();
             checkUser();
         }
 
-        // ฟังก์ชันดึงข้อมูล (เฉพาะของผู้ใช้นั้นๆ)
         async function fetchTransactions() {
             const selectedMonth = document.getElementById('filter-month').value;
             const selectedYear = document.getElementById('filter-year').value;
@@ -226,53 +240,56 @@
             }
 
             const { data, error } = await query;
-
             if (error) {
                 console.error('Error fetching data:', error);
                 return;
             }
 
-            renderTable(data);
+            renderDashboard(data);
         }
 
-        // เรนเดอร์ข้อมูลลงตาราง
-        function renderTable(transactions) {
+        function renderDashboard(transactions) {
             const listEl = document.getElementById('transaction-list');
             listEl.innerHTML = '';
 
             let totalIncome = 0;
             let totalExpense = 0;
+            let totalRecurring = 0;
 
             transactions.forEach(item => {
                 const isIncome = item.type === 'income';
+                const isRecurring = item.type === 'recurring';
                 const amountClass = isIncome ? 'text-emerald-600' : 'text-rose-600';
                 const prefix = isIncome ? '+' : '-';
                 
                 if (isIncome) {
                     totalIncome += Number(item.amount);
+                } else if (isRecurring) {
+                    totalRecurring += Number(item.amount);
+                    totalExpense += Number(item.amount);
                 } else {
                     totalExpense += Number(item.amount);
                 }
 
                 const typeLabels = {
-                    income: '<span class="bg-emerald-50 text-emerald-600 px-2 py-1 rounded-md text-xs font-medium">รายรับ</span>',
-                    expense: '<span class="bg-rose-50 text-rose-600 px-2 py-1 rounded-md text-xs font-medium">รายจ่าย</span>',
-                    recurring: '<span class="bg-amber-50 text-amber-600 px-2 py-1 rounded-md text-xs font-medium">รายเดือน</span>'
+                    income: '<span class="bg-emerald-50 text-emerald-600 px-2.5 py-1 rounded-lg text-[10px] font-semibold">รายรับ</span>',
+                    expense: '<span class="bg-rose-50 text-rose-600 px-2.5 py-1 rounded-lg text-[10px] font-semibold">รายจ่าย</span>',
+                    recurring: '<span class="bg-amber-50 text-amber-600 px-2.5 py-1 rounded-lg text-[10px] font-semibold">รายเดือน</span>'
                 };
 
                 const row = `
-                    <tr class="hover:bg-slate-50/50">
-                        <td class="py-3 text-slate-500 text-xs">${item.transaction_date}</td>
+                    <tr class="hover:bg-slate-50/80 transition">
+                        <td class="py-3 text-slate-400">${item.transaction_date}</td>
                         <td class="py-3 font-medium text-slate-700">${item.description}</td>
                         <td class="py-3">${typeLabels[item.type]}</td>
-                        <td class="py-3 text-right font-semibold ${amountClass}">${prefix}${Number(item.amount).toLocaleString('th-TH', {minimumFractionDigits: 2})}</td>
+                        <td class="py-3 text-right font-bold ${amountClass}">${prefix}${Number(item.amount).toLocaleString('th-TH', {minimumFractionDigits: 2})}</td>
                     </tr>
                 `;
                 listEl.innerHTML += row;
             });
 
             if (transactions.length === 0) {
-                listEl.innerHTML = `<tr><td colspan="4" class="text-center py-6 text-slate-400">ยังไม่มีข้อมูลในระบบ</td></tr>`;
+                listEl.innerHTML = `<tr><td colspan="4" class="text-center py-8 text-slate-400">ยังไม่มีข้อมูลในระบบช่วงเวลานี้</td></tr>`;
             }
 
             document.getElementById('total-income').innerText = totalIncome.toLocaleString('th-TH', {minimumFractionDigits: 2}) + ' บาท';
@@ -284,9 +301,46 @@
             netEl.className = `text-2xl font-bold mt-1 ${net >= 0 ? 'text-slate-900' : 'text-rose-600'}`;
             
             document.getElementById('item-count').innerText = `พบ ${transactions.length} รายการ`;
+
+            updateChart(totalIncome, totalExpense - totalRecurring, totalRecurring);
         }
 
-        // บันทึกข้อมูล (Supabase จะผูก user_id ให้อัตโนมัติจาก Session)
+        function updateChart(income, expense, recurring) {
+            const ctx = document.getElementById('financeChart').getContext('2d');
+            
+            if (financeChart) {
+                financeChart.destroy();
+            }
+
+            financeChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['รายรับรวม', 'รายจ่ายทั่วไป', 'ค่าใช้จ่ายรายเดือน'],
+                    datasets: [{
+                        data: [income, expense, recurring],
+                        backgroundColor: ['#10b981', '#f43f5e', '#f59e0b'],
+                        borderWidth: 0,
+                        hoverOffset: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                font: { family: 'Prompt', size: 12 },
+                                usePointStyle: true,
+                                padding: 20
+                            }
+                        }
+                    },
+                    cutout: '70%'
+                }
+            });
+        }
+
         async function addTransaction(e) {
             e.preventDefault();
             
@@ -307,7 +361,6 @@
                 console.error('Error inserting data:', error);
                 alert('เกิดข้อผิดพลาดในการบันทึกข้อมูล: ' + error.message);
             } else {
-                document.getElementById('description', 'amount').value = '';
                 document.getElementById('description').value = '';
                 document.getElementById('amount').value = '';
                 fetchTransactions();
@@ -317,7 +370,6 @@
             submitBtn.innerText = 'บันทึกข้อมูล';
         }
 
-        // เริ่มต้นตรวจสอบการเข้าสู่ระบบ
         checkUser();
     </script>
 </body>
