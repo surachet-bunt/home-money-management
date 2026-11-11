@@ -17,7 +17,7 @@
 </head>
 <body class="bg-slate-100 text-slate-800 min-h-screen flex items-center justify-center p-2 md:p-6">
 
-    <!-- ส่วนที่ 1: หน้าจอเข้าสู่ระบบ (Login Screen) - ค่าเริ่มต้นแสดงหน้านี้ ไม่ใส่ hidden -->
+    <!-- ส่วนที่ 1: หน้าจอเข้าสู่ระบบ (Login Screen) - ค่าเริ่มต้นให้แสดงเสมอเพื่อไม่ให้หน้าจอขาว -->
     <div id="auth-container" class="w-full max-w-md bg-white p-8 rounded-3xl shadow-xl border border-slate-100">
         <div class="text-center mb-6">
             <div class="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-3 font-bold text-xl shadow-inner">💰</div>
@@ -101,6 +101,7 @@
 
         <!-- Main Content Grid -->
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            
             <!-- Left: Form Input / Edit -->
             <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 h-fit space-y-4">
                 <div class="flex justify-between items-center border-b border-slate-100 pb-3">
@@ -137,6 +138,7 @@
 
             <!-- Right: Charts & Table -->
             <div class="lg:col-span-2 space-y-6">
+                
                 <!-- Chart Section -->
                 <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
                     <h2 class="text-base font-bold text-slate-900 mb-4">📊 สรุปสัดส่วนการเงิน</h2>
@@ -173,31 +175,38 @@
     </div>
 
     <script>
+        // === กรุณาตรวจสอบ Project URL และ Anon Key ให้ถูกต้อง ===
+        // หมายเหตุ: โดยทั่วไป Supabase Anon Key จะเป็นรหัส JWT ที่มีความยาวมากและขึ้นต้นด้วย eyJhbGci...
         const SUPABASE_URL = 'https://tuapmbxwkibobxwmadih.supabase.co';       
         const SUPABASE_ANON_KEY = 'sb_publishable_UNPj_koVoRXl92tjbAUVMg_e35WSDQF'; 
-        
+
         let sbClient = null;
         let financeChart = null;
 
-        // รอโหลด DOM ทั้งหมดก่อน
-        window.addEventListener('DOMContentLoaded', () => {
-            try {
-                if (window.supabase) {
+        // ฟังก์ชันช่วยเชื่อมต่อ Supabase SDK
+        function initSupabase() {
+            if (!sbClient && window.supabase) {
+                try {
                     sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-                    checkUser();
-                } else {
-                    console.error("Supabase library not loaded");
+                } catch (e) {
+                    console.error("Initialization client error:", e);
                 }
-            } catch (err) {
-                console.error("Initialization error:", err);
             }
-        });
+            return sbClient;
+        }
 
-        // ตรวจสอบสถานะล็อกอิน
+        // ตรวจสอบสถานะล็อกอินของผู้ใช้งาน
         async function checkUser() {
-            if (!sbClient) return;
+            const client = initSupabase();
+            if (!client) {
+                console.warn('Supabase SDK ยังโหลดไม่พร้อมทำงาน');
+                return;
+            }
+
             try {
-                const { data: { session }, error } = await sbClient.auth.getSession();
+                const { data: { session }, error } = await client.auth.getSession();
+                if (error) throw error;
+
                 if (session) {
                     document.getElementById('auth-container').classList.add('hidden');
                     document.getElementById('app-container').classList.remove('hidden');
@@ -212,83 +221,67 @@
                     document.getElementById('app-container').classList.add('hidden');
                 }
             } catch (err) {
-                console.error('Session error:', err);
+                console.error('Session Error:', err);
                 document.getElementById('auth-container').classList.remove('hidden');
                 document.getElementById('app-container').classList.add('hidden');
             }
         }
 
-        // ล็อกอินเข้าสู่ระบบ
+        // ฟังก์ชันล็อกอินและป้องกันปุ่มค้าง
         async function handleLogin(e) {
             e.preventDefault();
-            const email = document.getElementById('login-email').value;
+            const email = document.getElementById('login-email').value.trim();
             const password = document.getElementById('login-password').value;
             const errorEl = document.getElementById('auth-error');
             const loginBtn = document.getElementById('login-btn');
             
+            errorEl.innerText = '';
             loginBtn.disabled = true;
             loginBtn.innerText = 'กำลังตรวจสอบ...';
-            errorEl.innerText = '';
 
-            const { error } = await sbClient.auth.signInWithPassword({ email, password });
-            if (error) {
-                errorEl.innerText = 'อีเมลหรือรหัสผ่านไม่ถูกต้อง (' + error.message + ')';
+            try {
+                const client = initSupabase();
+                if (!client) {
+                    throw new Error('ระบบไม่สามารถเชื่อมต่อ Supabase SDK ได้ กรุณารีเฟรชหน้าเว็บอีกครั้ง');
+                }
+
+                const { data, error } = await client.auth.signInWithPassword({ email, password });
+                
+                if (error) {
+                    console.error('Login Failed:', error);
+                    errorEl.innerText = 'เข้าสู่ระบบไม่สำเร็จ: ' + (error.message || 'อีเมลหรือรหัสผ่านไม่ถูกต้อง');
+                    loginBtn.disabled = false;
+                    loginBtn.innerText = 'เข้าสู่ระบบ';
+                    return;
+                }
+
+                // สำเร็จ
+                loginBtn.innerText = 'สำเร็จ!';
+                await checkUser();
+
+            } catch (err) {
+                console.error('Unexpected Login Error:', err);
+                errorEl.innerText = 'เกิดข้อผิดพลาด: ' + err.message;
+            } finally {
                 loginBtn.disabled = false;
-                loginBtn.innerText = 'เข้าสู่ระบบ';
-            } else {
-                checkUser();
+                if (loginBtn.innerText !== 'สำเร็จ!') {
+                    loginBtn.innerText = 'เข้าสู่ระบบ';
+                }
             }
         }
 
         // ออกจากระบบ
         async function handleLogout() {
             if (confirm('คุณต้องการออกจากระบบใช่หรือไม่?')) {
-                await sbClient.auth.signOut();
+                const client = initSupabase();
+                if (client) {
+                    await client.auth.signOut();
+                }
                 checkUser();
             }
         }
 
         // ดึงข้อมูลรายการธุรกรรมจาก Supabase
         async function fetchTransactions() {
-            const selectedMonth = document.getElementById('filter-month').value;
-            const selectedYear = document.getElementById('filter-year').value;
-            
-            let query = sbClient.from('transactions').select('*').order('transaction_date', { ascending: false });
-
-            if (selectedYear !== 'all' && selectedMonth !== 'all') {
-                const startDate = `${selectedYear}-${selectedMonth}-01`;
-                const lastDay = new Date(selectedYear, selectedMonth, 0).getDate();
-                const endDate = `${selectedYear}-${selectedMonth}-${lastDay}`;
-                query = query.gte('transaction_date', startDate).lte('transaction_date', endDate);
-            } else if (selectedYear !== 'all') {
-                query = query.gte('transaction_date', `${selectedYear}-01-01`).lte('transaction_date', `${selectedYear}-12-31`);
-            }
-
-            const { data, error } = await query;
-
-            if (error) {
-                console.error('Error fetching data:', error);
-                alert('ไม่สามารถดึงข้อมูลได้: ' + error.message);
-                return;
-            }
-            renderDashboard(data || []);
-        }
-
-        // แสดงผลบนหน้า Dashboard หลัก
-        function renderDashboard(transactions) {
-            const listEl = document.getElementById('transaction-list');
-            listEl.innerHTML = '';
-            let totalIncome = 0;
-            let totalExpense = 0;
-            let totalRecurring = 0;
-
-            transactions.forEach(item => {
-                const isIncome = item.type === 'income';
-                const isRecurring = item.type === 'recurring';
-                const amountClass = isIncome ? 'text-emerald-600' : 'text-rose-600';
-                const prefix = isIncome ? '+' : '-';
-                
-                if (isIncome) {
-                    totalIncome += Number(item.amount);
-                } else if (isRecurring) {
-                   
+            const client = initSupabase();
+            if (!c
