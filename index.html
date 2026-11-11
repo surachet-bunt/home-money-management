@@ -17,8 +17,8 @@
 </head>
 <body class="bg-slate-100 text-slate-800 min-h-screen flex items-center justify-center p-2 md:p-6">
 
-    <!-- ส่วนที่ 1: หน้าจอเข้าสู่ระบบ (Login Screen) -->
-    <div id="auth-container" class="w-full max-w-md bg-white p-8 rounded-3xl shadow-xl border border-slate-100 hidden">
+    <!-- ส่วนที่ 1: หน้าจอเข้าสู่ระบบ (Login Screen) - ค่าเริ่มต้นแสดงหน้านี้ ไม่ใส่ hidden -->
+    <div id="auth-container" class="w-full max-w-md bg-white p-8 rounded-3xl shadow-xl border border-slate-100">
         <div class="text-center mb-6">
             <div class="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-3 font-bold text-xl shadow-inner">💰</div>
             <h1 class="text-2xl font-bold text-slate-900">Home Money</h1>
@@ -101,7 +101,6 @@
 
         <!-- Main Content Grid -->
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            
             <!-- Left: Form Input / Edit -->
             <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 h-fit space-y-4">
                 <div class="flex justify-between items-center border-b border-slate-100 pb-3">
@@ -138,7 +137,6 @@
 
             <!-- Right: Charts & Table -->
             <div class="lg:col-span-2 space-y-6">
-                
                 <!-- Chart Section -->
                 <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
                     <h2 class="text-base font-bold text-slate-900 mb-4">📊 สรุปสัดส่วนการเงิน</h2>
@@ -175,26 +173,46 @@
     </div>
 
     <script>
-        // === ตั้งค่าการเชื่อมต่อ Supabase ของคุณที่นี่ ===
         const SUPABASE_URL = 'https://tuapmbxwkibobxwmadih.supabase.co';       
         const SUPABASE_ANON_KEY = 'sb_publishable_UNPj_koVoRXl92tjbAUVMg_e35WSDQF'; 
         
-        const sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        let sbClient = null;
         let financeChart = null;
+
+        // รอโหลด DOM ทั้งหมดก่อน
+        window.addEventListener('DOMContentLoaded', () => {
+            try {
+                if (window.supabase) {
+                    sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                    checkUser();
+                } else {
+                    console.error("Supabase library not loaded");
+                }
+            } catch (err) {
+                console.error("Initialization error:", err);
+            }
+        });
 
         // ตรวจสอบสถานะล็อกอิน
         async function checkUser() {
-            const { data: { session } } = await sbClient.auth.getSession();
-            if (session) {
-                document.getElementById('auth-container').classList.add('hidden');
-                document.getElementById('app-container').classList.remove('hidden');
-                
-                const now = new Date();
-                document.getElementById('date').valueAsDate = now;
-                document.getElementById('filter-month').value = String(now.getMonth() + 1).padStart(2, '0');
-                document.getElementById('filter-year').value = String(now.getFullYear());
-                fetchTransactions();
-            } else {
+            if (!sbClient) return;
+            try {
+                const { data: { session }, error } = await sbClient.auth.getSession();
+                if (session) {
+                    document.getElementById('auth-container').classList.add('hidden');
+                    document.getElementById('app-container').classList.remove('hidden');
+                    
+                    const now = new Date();
+                    document.getElementById('date').valueAsDate = now;
+                    document.getElementById('filter-month').value = String(now.getMonth() + 1).padStart(2, '0');
+                    document.getElementById('filter-year').value = String(now.getFullYear());
+                    fetchTransactions();
+                } else {
+                    document.getElementById('auth-container').classList.remove('hidden');
+                    document.getElementById('app-container').classList.add('hidden');
+                }
+            } catch (err) {
+                console.error('Session error:', err);
                 document.getElementById('auth-container').classList.remove('hidden');
                 document.getElementById('app-container').classList.add('hidden');
             }
@@ -214,7 +232,7 @@
 
             const { error } = await sbClient.auth.signInWithPassword({ email, password });
             if (error) {
-                errorEl.innerText = 'อีเมลหรือรหัสผ่านไม่ถูกต้อง';
+                errorEl.innerText = 'อีเมลหรือรหัสผ่านไม่ถูกต้อง (' + error.message + ')';
                 loginBtn.disabled = false;
                 loginBtn.innerText = 'เข้าสู่ระบบ';
             } else {
@@ -235,7 +253,6 @@
             const selectedMonth = document.getElementById('filter-month').value;
             const selectedYear = document.getElementById('filter-year').value;
             
-            // แก้ไขข้อผิดพลาดตรง '\*' เป็น '*'
             let query = sbClient.from('transactions').select('*').order('transaction_date', { ascending: false });
 
             if (selectedYear !== 'all' && selectedMonth !== 'all') {
@@ -248,12 +265,13 @@
             }
 
             const { data, error } = await query;
+
             if (error) {
                 console.error('Error fetching data:', error);
                 alert('ไม่สามารถดึงข้อมูลได้: ' + error.message);
                 return;
             }
-            renderDashboard(data);
+            renderDashboard(data || []);
         }
 
         // แสดงผลบนหน้า Dashboard หลัก
@@ -273,119 +291,4 @@
                 if (isIncome) {
                     totalIncome += Number(item.amount);
                 } else if (isRecurring) {
-                    totalRecurring += Number(item.amount);
-                    totalExpense += Number(item.amount);
-                } else {
-                    totalExpense += Number(item.amount);
-                }
-
-                const typeLabels = {
-                    income: '<span class="bg-emerald-50 text-emerald-600 px-2.5 py-1 rounded-lg text-[10px] font-semibold">รายรับ</span>',
-                    expense: '<span class="bg-rose-50 text-rose-600 px-2.5 py-1 rounded-lg text-[10px] font-semibold">รายจ่าย</span>',
-                    recurring: '<span class="bg-amber-50 text-amber-600 px-2.5 py-1 rounded-lg text-[10px] font-semibold">รายเดือน</span>'
-                };
-
-                // เพิ่มคอลัมน์และปุ่มสำหรับ "ลบ" เพื่อฟังก์ชันที่ครบครัน
-                const row = `
-                    <tr class="hover:bg-slate-50/80 transition border-b border-slate-100">
-                        <td class="py-3 text-slate-400">${item.transaction_date}</td>
-                        <td class="py-3 font-medium text-slate-700">${item.description}</td>
-                        <td class="py-3">${typeLabels[item.type]}</td>
-                        <td class="py-3 text-right font-bold \${amountClass}">\${prefix}${Number(item.amount).toLocaleString('th-TH', {minimumFractionDigits: 2})}</td>
-                        <td class="py-3 text-center flex justify-center gap-1.5">
-                            <button onclick="editTransaction('\${item.id}', '\${item.type}', '\${item.description}', \${item.amount}, '${item.transaction_date}')" class="text-indigo-600 hover:text-indigo-900 bg-indigo-50 hover:bg-indigo-100 px-2 py-1 rounded-lg text-[11px] font-medium transition">แก้ไข</button>
-                            <button onclick="deleteTransaction('${item.id}')" class="text-rose-600 hover:text-rose-950 bg-rose-50 hover:bg-rose-100 px-2 py-1 rounded-lg text-[11px] font-medium transition">ลบ</button>
-                        </td>
-                    </tr>
-                `;
-                listEl.innerHTML += row;
-            });
-
-            if (transactions.length === 0) {
-                listEl.innerHTML = `<tr><td colspan="5" class="text-center py-8 text-slate-400">ยังไม่มีข้อมูลในระบบช่วงเวลานี้</td></tr>`;
-            }
-
-            document.getElementById('total-income').innerText = totalIncome.toLocaleString('th-TH', {minimumFractionDigits: 2}) + ' บาท';
-            document.getElementById('total-expense').innerText = totalExpense.toLocaleString('th-TH', {minimumFractionDigits: 2}) + ' บาท';
-            
-            const net = totalIncome - totalExpense;
-            const netEl = document.getElementById('net-balance');
-            netEl.innerText = net.toLocaleString('th-TH', {minimumFractionDigits: 2}) + ' บาท';
-            netEl.className = `text-2xl font-bold mt-1 ${net >= 0 ? 'text-slate-900' : 'text-rose-600'}`;
-            
-            document.getElementById('item-count').innerText = `พบ ${transactions.length} รายการ`;
-            updateChart(totalIncome, totalExpense - totalRecurring, totalRecurring);
-        }
-
-        // ฟังก์ชันสำหรับลบรายการธุรกรรมออกจากระบบ
-        async function deleteTransaction(id) {
-            if (confirm('คุณแน่ใจหรือไม่ว่าต้องการลบรายการนี้? การดำเนินการนี้ไม่สามารถย้อนกลับได้')) {
-                const { error } = await sbClient.from('transactions').delete().eq('id', id);
-                if (error) {
-                    console.error('Error deleting data:', error);
-                    alert('เกิดข้อผิดพลาดในการลบข้อมูล: ' + error.message);
-                } else {
-                    fetchTransactions();
-                    // หากลบรายการที่กำลังเปิดแก้ไขอยู่ ให้ทำการรีเซ็ตฟอร์มกลับไปค่าเริ่มต้น
-                    if (document.getElementById('edit-id').value === id) {
-                        resetForm();
-                    }
-                }
-            }
-        }
-
-        // อัปเดตและแสดงผลกราฟสัดส่วนการเงิน
-        function updateChart(income, expense, recurring) {
-            const ctx = document.getElementById('financeChart').getContext('2d');
-            
-            if (financeChart) {
-                financeChart.destroy();
-            }
-            financeChart = new Chart(ctx, {
-                type: 'doughnut',
-                data: {
-                    labels: ['รายรับรวม', 'รายจ่ายทั่วไป', 'ค่าใช้จ่ายรายเดือน'],
-                    datasets: [{
-                        data: [income, expense, recurring],
-                        backgroundColor: ['#10b981', '#f43f5e', '#f59e0b'],
-                        borderWidth: 0,
-                        hoverOffset: 4
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            position: 'bottom',
-                            labels: {
-                                font: { family: 'Prompt', size: 12 },
-                                usePointStyle: true,
-                                padding: 20
-                            }
-                        }
-                    },
-                    cutout: '70%'
-                }
-            });
-        }
-
-        // โหลดข้อมูลเพื่อเข้าสู่การแก้ไข
-        function editTransaction(id, type, description, amount, date) {
-            document.getElementById('edit-id').value = id;
-            document.getElementById('type').value = type;
-            document.getElementById('description').value = description;
-            document.getElementById('amount').value = amount;
-            document.getElementById('date').value = date;
-            document.getElementById('form-title').innerText = '✏️ แก้ไขรายการ';
-            document.getElementById('submit-btn').innerText = 'บันทึกการแก้ไข';
-            document.getElementById('submit-btn').classList.replace('bg-indigo-600', 'bg-amber-600');
-            document.getElementById('submit-btn').classList.replace('hover:bg-indigo-700', 'hover:bg-amber-700');
-            document.getElementById('cancel-edit-btn').classList.remove('hidden');
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-
-        // ล้างข้อมูลฟอร์ม และเปลี่ยนกลับเข้าสู่โหมดเพิ่มรายการใหม่
-        function resetForm() {
-            document.getElementById('transaction-form').reset();
-            document.getElementById('edit-id').val
+                   
