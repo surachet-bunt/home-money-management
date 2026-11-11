@@ -17,7 +17,7 @@
 </head>
 <body class="bg-slate-100 text-slate-800 min-h-screen flex items-center justify-center p-2 md:p-6">
 
-    <!-- ส่วนที่ 1: หน้าจอเข้าสู่ระบบ (Login Screen) - ค่าเริ่มต้นให้แสดงเสมอเพื่อไม่ให้หน้าจอขาว -->
+    <!-- ส่วนที่ 1: หน้าจอเข้าสู่ระบบ (Login Screen) -->
     <div id="auth-container" class="w-full max-w-md bg-white p-8 rounded-3xl shadow-xl border border-slate-100">
         <div class="text-center mb-6">
             <div class="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-3 font-bold text-xl shadow-inner">💰</div>
@@ -42,7 +42,6 @@
 
     <!-- ส่วนที่ 2: หน้าจอหลักจัดการการเงิน -->
     <div id="app-container" class="w-full max-w-6xl mx-auto space-y-6 hidden">
-        
         <!-- Header & Filter Bar -->
         <header class="bg-white p-5 rounded-3xl shadow-sm border border-slate-100 flex flex-col md:flex-row justify-between items-center gap-4">
             <div class="flex items-center gap-3">
@@ -101,7 +100,6 @@
 
         <!-- Main Content Grid -->
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            
             <!-- Left: Form Input / Edit -->
             <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 h-fit space-y-4">
                 <div class="flex justify-between items-center border-b border-slate-100 pb-3">
@@ -138,7 +136,6 @@
 
             <!-- Right: Charts & Table -->
             <div class="lg:col-span-2 space-y-6">
-                
                 <!-- Chart Section -->
                 <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
                     <h2 class="text-base font-bold text-slate-900 mb-4">📊 สรุปสัดส่วนการเงิน</h2>
@@ -175,15 +172,12 @@
     </div>
 
     <script>
-        // === กรุณาตรวจสอบ Project URL และ Anon Key ให้ถูกต้อง ===
-        // หมายเหตุ: อัปเดตคีย์เป็นระบบ Legacy JWT Key (ที่ขึ้นต้นด้วย eyJhbGci...) เพื่อใช้คู่กับ Client-side Auth
         const SUPABASE_URL = 'https://tuapmbxwkibobxwmadih.supabase.co';       
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR1YXBtYnh3a2lib2J4d21hZGloIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTM5OTk3NzIsImV4cCI6MjEwOTU3NTc3Mn0.0cv-chbgbQELabgD7aDZKDcvVh7dfyWfMOstNjQxnEg'; 
 
         let sbClient = null;
         let financeChart = null;
 
-        // ฟังก์ชันช่วยเชื่อมต่อ Supabase SDK
         function initSupabase() {
             if (!sbClient && window.supabase) {
                 try {
@@ -195,13 +189,9 @@
             return sbClient;
         }
 
-        // ตรวจสอบสถานะล็อกอินของผู้ใช้งาน
         async function checkUser() {
             const client = initSupabase();
-            if (!client) {
-                console.warn('Supabase SDK ยังโหลดไม่พร้อมทำงาน');
-                return;
-            }
+            if (!client) return;
 
             try {
                 const { data: { session }, error } = await client.auth.getSession();
@@ -227,7 +217,6 @@
             }
         }
 
-        // ฟังก์ชันล็อกอินและป้องกันปุ่มค้าง
         async function handleLogin(e) {
             e.preventDefault();
             const email = document.getElementById('login-email').value.trim();
@@ -242,7 +231,7 @@
             try {
                 const client = initSupabase();
                 if (!client) {
-                    throw new Error('ระบบไม่สามารถเชื่อมต่อ Supabase SDK ได้ กรุณารีเฟรชหน้าเว็บอีกครั้ง');
+                    throw new Error('ระบบไม่สามารถเชื่อมต่อ Supabase SDK ได้ กรุณารีเฟรชหน้าเว็บ');
                 }
 
                 const { data, error } = await client.auth.signInWithPassword({ email, password });
@@ -255,7 +244,6 @@
                     return;
                 }
 
-                // สำเร็จ
                 loginBtn.innerText = 'สำเร็จ!';
                 await checkUser();
 
@@ -270,18 +258,14 @@
             }
         }
 
-        // ออกจากระบบ
         async function handleLogout() {
             if (confirm('คุณต้องการออกจากระบบใช่หรือไม่?')) {
                 const client = initSupabase();
-                if (client) {
-                    await client.auth.signOut();
-                }
+                if (client) await client.auth.signOut();
                 checkUser();
             }
         }
 
-        // ดึงข้อมูลรายการธุรกรรมจาก Supabase
         async function fetchTransactions() {
             const client = initSupabase();
             if (!client) return;
@@ -309,7 +293,6 @@
             renderDashboard(data || []);
         }
 
-        // แสดงผลบนหน้า Dashboard หลัก
         function renderDashboard(transactions) {
             const listEl = document.getElementById('transaction-list');
             listEl.innerHTML = '';
@@ -317,11 +300,4 @@
             let totalExpense = 0;
             let totalRecurring = 0;
 
-            transactions.forEach(item => {
-                const isIncome = item.type === 'income';
-                const isRecurring = item.type === 'recurring';
-                const amountClass = isIncome ? 'text-emerald-600' : 'text-rose-600';
-                const prefix = isIncome ? '+' : '-';
-                
-                if (isIncome) {
-                    total
+         
