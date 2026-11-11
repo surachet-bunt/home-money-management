@@ -176,7 +176,7 @@
 
     <script>
         // === กรุณาตรวจสอบ Project URL และ Anon Key ให้ถูกต้อง ===
-        // หมายเหตุ: โดยทั่วไป Supabase Anon Key จะเป็นรหัส JWT ที่มีความยาวมากและขึ้นต้นด้วย eyJhbGci...
+        // หมายเหตุ: อัปเดตคีย์เป็นระบบ Legacy JWT Key (ที่ขึ้นต้นด้วย eyJhbGci...) เพื่อใช้คู่กับ Client-side Auth
         const SUPABASE_URL = 'https://tuapmbxwkibobxwmadih.supabase.co';       
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR1YXBtYnh3a2lib2J4d21hZGloIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTM5OTk3NzIsImV4cCI6MjEwOTU3NTc3Mn0.0cv-chbgbQELabgD7aDZKDcvVh7dfyWfMOstNjQxnEg'; 
 
@@ -284,4 +284,44 @@
         // ดึงข้อมูลรายการธุรกรรมจาก Supabase
         async function fetchTransactions() {
             const client = initSupabase();
-            if (!c
+            if (!client) return;
+
+            const selectedMonth = document.getElementById('filter-month').value;
+            const selectedYear = document.getElementById('filter-year').value;
+            
+            let query = client.from('transactions').select('*').order('transaction_date', { ascending: false });
+
+            if (selectedYear !== 'all' && selectedMonth !== 'all') {
+                const startDate = `${selectedYear}-${selectedMonth}-01`;
+                const lastDay = new Date(selectedYear, selectedMonth, 0).getDate();
+                const endDate = `${selectedYear}-${selectedMonth}-${lastDay}`;
+                query = query.gte('transaction_date', startDate).lte('transaction_date', endDate);
+            } else if (selectedYear !== 'all') {
+                query = query.gte('transaction_date', `${selectedYear}-01-01`).lte('transaction_date', `${selectedYear}-12-31`);
+            }
+
+            const { data, error } = await query;
+            if (error) {
+                console.error('Fetch error:', error);
+                alert('ไม่สามารถดึงข้อมูลได้: ' + error.message);
+                return;
+            }
+            renderDashboard(data || []);
+        }
+
+        // แสดงผลบนหน้า Dashboard หลัก
+        function renderDashboard(transactions) {
+            const listEl = document.getElementById('transaction-list');
+            listEl.innerHTML = '';
+            let totalIncome = 0;
+            let totalExpense = 0;
+            let totalRecurring = 0;
+
+            transactions.forEach(item => {
+                const isIncome = item.type === 'income';
+                const isRecurring = item.type === 'recurring';
+                const amountClass = isIncome ? 'text-emerald-600' : 'text-rose-600';
+                const prefix = isIncome ? '+' : '-';
+                
+                if (isIncome) {
+                    total
