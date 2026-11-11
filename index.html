@@ -161,7 +161,7 @@
                                     <th class="pb-2 font-semibold">รายการ</th>
                                     <th class="pb-2 font-semibold">ประเภท</th>
                                     <th class="pb-2 font-semibold text-right">จำนวนเงิน</th>
-                                    <th class="pb-2 font-semibold text-center w-16">จัดการ</th>
+                                    <th class="pb-2 font-semibold text-center w-24">จัดการ</th>
                                 </tr>
                             </thead>
                             <tbody id="transaction-list" class="divide-y divide-slate-50 text-xs">
@@ -170,7 +170,6 @@
                         </table>
                     </div>
                 </div>
-
             </div>
         </div>
     </div>
@@ -194,7 +193,6 @@
                 document.getElementById('date').valueAsDate = now;
                 document.getElementById('filter-month').value = String(now.getMonth() + 1).padStart(2, '0');
                 document.getElementById('filter-year').value = String(now.getFullYear());
-
                 fetchTransactions();
             } else {
                 document.getElementById('auth-container').classList.remove('hidden');
@@ -202,19 +200,19 @@
             }
         }
 
+        // ล็อกอินเข้าสู่ระบบ
         async function handleLogin(e) {
             e.preventDefault();
             const email = document.getElementById('login-email').value;
             const password = document.getElementById('login-password').value;
             const errorEl = document.getElementById('auth-error');
             const loginBtn = document.getElementById('login-btn');
-
+            
             loginBtn.disabled = true;
             loginBtn.innerText = 'กำลังตรวจสอบ...';
             errorEl.innerText = '';
 
             const { error } = await sbClient.auth.signInWithPassword({ email, password });
-
             if (error) {
                 errorEl.innerText = 'อีเมลหรือรหัสผ่านไม่ถูกต้อง';
                 loginBtn.disabled = false;
@@ -224,15 +222,20 @@
             }
         }
 
+        // ออกจากระบบ
         async function handleLogout() {
-            await sbClient.auth.signOut();
-            checkUser();
+            if (confirm('คุณต้องการออกจากระบบใช่หรือไม่?')) {
+                await sbClient.auth.signOut();
+                checkUser();
+            }
         }
 
+        // ดึงข้อมูลรายการธุรกรรมจาก Supabase
         async function fetchTransactions() {
             const selectedMonth = document.getElementById('filter-month').value;
             const selectedYear = document.getElementById('filter-year').value;
-
+            
+            // แก้ไขข้อผิดพลาดตรง '\*' เป็น '*'
             let query = sbClient.from('transactions').select('*').order('transaction_date', { ascending: false });
 
             if (selectedYear !== 'all' && selectedMonth !== 'all') {
@@ -247,16 +250,16 @@
             const { data, error } = await query;
             if (error) {
                 console.error('Error fetching data:', error);
+                alert('ไม่สามารถดึงข้อมูลได้: ' + error.message);
                 return;
             }
-
             renderDashboard(data);
         }
 
+        // แสดงผลบนหน้า Dashboard หลัก
         function renderDashboard(transactions) {
             const listEl = document.getElementById('transaction-list');
             listEl.innerHTML = '';
-
             let totalIncome = 0;
             let totalExpense = 0;
             let totalRecurring = 0;
@@ -282,14 +285,16 @@
                     recurring: '<span class="bg-amber-50 text-amber-600 px-2.5 py-1 rounded-lg text-[10px] font-semibold">รายเดือน</span>'
                 };
 
+                // เพิ่มคอลัมน์และปุ่มสำหรับ "ลบ" เพื่อฟังก์ชันที่ครบครัน
                 const row = `
-                    <tr class="hover:bg-slate-50/80 transition">
+                    <tr class="hover:bg-slate-50/80 transition border-b border-slate-100">
                         <td class="py-3 text-slate-400">${item.transaction_date}</td>
                         <td class="py-3 font-medium text-slate-700">${item.description}</td>
                         <td class="py-3">${typeLabels[item.type]}</td>
-                        <td class="py-3 text-right font-bold ${amountClass}">${prefix}${Number(item.amount).toLocaleString('th-TH', {minimumFractionDigits: 2})}</td>
-                        <td class="py-3 text-center">
-                            <button onclick="editTransaction('${item.id}', '${item.type}', '${item.description}', ${item.amount}, '${item.transaction_date}')" class="text-indigo-600 hover:text-indigo-900 bg-indigo-50 hover:bg-indigo-100 px-2.5 py-1 rounded-lg text-[11px] font-medium transition">แก้ไข</button>
+                        <td class="py-3 text-right font-bold \${amountClass}">\${prefix}${Number(item.amount).toLocaleString('th-TH', {minimumFractionDigits: 2})}</td>
+                        <td class="py-3 text-center flex justify-center gap-1.5">
+                            <button onclick="editTransaction('\${item.id}', '\${item.type}', '\${item.description}', \${item.amount}, '${item.transaction_date}')" class="text-indigo-600 hover:text-indigo-900 bg-indigo-50 hover:bg-indigo-100 px-2 py-1 rounded-lg text-[11px] font-medium transition">แก้ไข</button>
+                            <button onclick="deleteTransaction('${item.id}')" class="text-rose-600 hover:text-rose-950 bg-rose-50 hover:bg-rose-100 px-2 py-1 rounded-lg text-[11px] font-medium transition">ลบ</button>
                         </td>
                     </tr>
                 `;
@@ -309,17 +314,33 @@
             netEl.className = `text-2xl font-bold mt-1 ${net >= 0 ? 'text-slate-900' : 'text-rose-600'}`;
             
             document.getElementById('item-count').innerText = `พบ ${transactions.length} รายการ`;
-
             updateChart(totalIncome, totalExpense - totalRecurring, totalRecurring);
         }
 
+        // ฟังก์ชันสำหรับลบรายการธุรกรรมออกจากระบบ
+        async function deleteTransaction(id) {
+            if (confirm('คุณแน่ใจหรือไม่ว่าต้องการลบรายการนี้? การดำเนินการนี้ไม่สามารถย้อนกลับได้')) {
+                const { error } = await sbClient.from('transactions').delete().eq('id', id);
+                if (error) {
+                    console.error('Error deleting data:', error);
+                    alert('เกิดข้อผิดพลาดในการลบข้อมูล: ' + error.message);
+                } else {
+                    fetchTransactions();
+                    // หากลบรายการที่กำลังเปิดแก้ไขอยู่ ให้ทำการรีเซ็ตฟอร์มกลับไปค่าเริ่มต้น
+                    if (document.getElementById('edit-id').value === id) {
+                        resetForm();
+                    }
+                }
+            }
+        }
+
+        // อัปเดตและแสดงผลกราฟสัดส่วนการเงิน
         function updateChart(income, expense, recurring) {
             const ctx = document.getElementById('financeChart').getContext('2d');
             
             if (financeChart) {
                 financeChart.destroy();
             }
-
             financeChart = new Chart(ctx, {
                 type: 'doughnut',
                 data: {
@@ -349,78 +370,22 @@
             });
         }
 
-        // นำข้อมูลเข้าฟอร์มเพื่อเตรียมแก้ไข
+        // โหลดข้อมูลเพื่อเข้าสู่การแก้ไข
         function editTransaction(id, type, description, amount, date) {
             document.getElementById('edit-id').value = id;
             document.getElementById('type').value = type;
             document.getElementById('description').value = description;
             document.getElementById('amount').value = amount;
             document.getElementById('date').value = date;
-
             document.getElementById('form-title').innerText = '✏️ แก้ไขรายการ';
             document.getElementById('submit-btn').innerText = 'บันทึกการแก้ไข';
             document.getElementById('submit-btn').classList.replace('bg-indigo-600', 'bg-amber-600');
             document.getElementById('submit-btn').classList.replace('hover:bg-indigo-700', 'hover:bg-amber-700');
             document.getElementById('cancel-edit-btn').classList.remove('hidden');
-
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
-        // รีเซ็ตฟอร์มกลับเป็นโหมดเพิ่มใหม่
+        // ล้างข้อมูลฟอร์ม และเปลี่ยนกลับเข้าสู่โหมดเพิ่มรายการใหม่
         function resetForm() {
             document.getElementById('transaction-form').reset();
-            document.getElementById('edit-id').value = '';
-            document.getElementById('form-title').innerText = '➕ เพิ่มรายการใหม่';
-            document.getElementById('submit-btn').innerText = 'บันทึกข้อมูล';
-            document.getElementById('submit-btn').classList.replace('bg-amber-600', 'bg-indigo-600');
-            document.getElementById('submit-btn').classList.replace('hover:bg-amber-700', 'hover:bg-indigo-700');
-            document.getElementById('cancel-edit-btn').classList.add('hidden');
-            
-            const now = new Date();
-            document.getElementById('date').valueAsDate = now;
-        }
-
-        // บันทึกข้อมูล (รองรับทั้งเพิ่มใหม่และอัปเดต)
-        async function saveTransaction(e) {
-            e.preventDefault();
-            
-            const submitBtn = document.getElementById('submit-btn');
-            const editId = document.getElementById('edit-id').value;
-            
-            submitBtn.disabled = true;
-            submitBtn.innerText = 'กำลังบันทึก...';
-
-            const itemData = {
-                type: document.getElementById('type').value,
-                description: document.getElementById('description').value,
-                amount: parseFloat(document.getElementById('amount').value),
-                transaction_date: document.getElementById('date').value
-            };
-
-            let error;
-
-            if (editId) {
-                // อัปเดตรายการเดิม
-                const res = await sbClient.from('transactions').update(itemData).eq('id', editId);
-                error = res.error;
-            } else {
-                // เพิ่มรายการใหม่
-                const res = await sbClient.from('transactions').insert([itemData]);
-                error = res.error;
-            }
-
-            if (error) {
-                console.error('Error saving data:', error);
-                alert('เกิดข้อผิดพลาดในการบันทึกข้อมูล: ' + error.message);
-            } else {
-                resetForm();
-                fetchTransactions();
-            }
-
-            submitBtn.disabled = false;
-        }
-
-        checkUser();
-    </script>
-</body>
-</html>
+            document.getElementById('edit-id').val
