@@ -18,7 +18,7 @@
 <body class="bg-slate-100 text-slate-800 min-h-screen flex items-center justify-center p-2 md:p-6">
 
     <!-- ส่วนที่ 1: หน้าจอเข้าสู่ระบบ (Login Screen) -->
-    <div id="auth-container" class="w-full max-w-md bg-white p-8 rounded-3xl shadow-xl border border-slate-100">
+    <div id="auth-container" class="w-full max-w-md bg-white p-8 rounded-3xl shadow-xl border border-slate-100 hidden">
         <div class="text-center mb-6">
             <div class="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-3 font-bold text-xl shadow-inner">💰</div>
             <h1 class="text-2xl font-bold text-slate-900">Home Money</h1>
@@ -42,6 +42,7 @@
 
     <!-- ส่วนที่ 2: หน้าจอหลักจัดการการเงิน -->
     <div id="app-container" class="w-full max-w-6xl mx-auto space-y-6 hidden">
+        
         <!-- Header & Filter Bar -->
         <header class="bg-white p-5 rounded-3xl shadow-sm border border-slate-100 flex flex-col md:flex-row justify-between items-center gap-4">
             <div class="flex items-center gap-3">
@@ -100,6 +101,7 @@
 
         <!-- Main Content Grid -->
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            
             <!-- Left: Form Input / Edit -->
             <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 h-fit space-y-4">
                 <div class="flex justify-between items-center border-b border-slate-100 pb-3">
@@ -136,6 +138,7 @@
 
             <!-- Right: Charts & Table -->
             <div class="lg:col-span-2 space-y-6">
+                
                 <!-- Chart Section -->
                 <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
                     <h2 class="text-base font-bold text-slate-900 mb-4">📊 สรุปสัดส่วนการเงิน</h2>
@@ -158,7 +161,7 @@
                                     <th class="pb-2 font-semibold">รายการ</th>
                                     <th class="pb-2 font-semibold">ประเภท</th>
                                     <th class="pb-2 font-semibold text-right">จำนวนเงิน</th>
-                                    <th class="pb-2 font-semibold text-center w-24">จัดการ</th>
+                                    <th class="pb-2 font-semibold text-center w-16">จัดการ</th>
                                 </tr>
                             </thead>
                             <tbody id="transaction-list" class="divide-y divide-slate-50 text-xs">
@@ -167,51 +170,33 @@
                         </table>
                     </div>
                 </div>
+
             </div>
         </div>
     </div>
 
     <script>
+        // === ตั้งค่าการเชื่อมต่อ Supabase ของคุณที่นี่ ===
         const SUPABASE_URL = 'https://tuapmbxwkibobxwmadih.supabase.co';       
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR1YXBtYnh3a2lib2J4d21hZGloIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTM5OTk3NzIsImV4cCI6MjEwOTU3NTc3Mn0.0cv-chbgbQELabgD7aDZKDcvVh7dfyWfMOstNjQxnEg'; 
-
-        let sbClient = null;
+        const SUPABASE_ANON_KEY = 'sb_publishable_UNPj_koVoRXl92tjbAUVMg_e35WSDQF'; 
+        
+        const sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         let financeChart = null;
 
-        function initSupabase() {
-            if (!sbClient && window.supabase) {
-                try {
-                    sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-                } catch (e) {
-                    console.error("Initialization client error:", e);
-                }
-            }
-            return sbClient;
-        }
-
+        // ตรวจสอบสถานะล็อกอิน
         async function checkUser() {
-            const client = initSupabase();
-            if (!client) return;
+            const { data: { session } } = await sbClient.auth.getSession();
+            if (session) {
+                document.getElementById('auth-container').classList.add('hidden');
+                document.getElementById('app-container').classList.remove('hidden');
+                
+                const now = new Date();
+                document.getElementById('date').valueAsDate = now;
+                document.getElementById('filter-month').value = String(now.getMonth() + 1).padStart(2, '0');
+                document.getElementById('filter-year').value = String(now.getFullYear());
 
-            try {
-                const { data: { session }, error } = await client.auth.getSession();
-                if (error) throw error;
-
-                if (session) {
-                    document.getElementById('auth-container').classList.add('hidden');
-                    document.getElementById('app-container').classList.remove('hidden');
-                    
-                    const now = new Date();
-                    document.getElementById('date').valueAsDate = now;
-                    document.getElementById('filter-month').value = String(now.getMonth() + 1).padStart(2, '0');
-                    document.getElementById('filter-year').value = String(now.getFullYear());
-                    fetchTransactions();
-                } else {
-                    document.getElementById('auth-container').classList.remove('hidden');
-                    document.getElementById('app-container').classList.add('hidden');
-                }
-            } catch (err) {
-                console.error('Session Error:', err);
+                fetchTransactions();
+            } else {
                 document.getElementById('auth-container').classList.remove('hidden');
                 document.getElementById('app-container').classList.add('hidden');
             }
@@ -219,61 +204,36 @@
 
         async function handleLogin(e) {
             e.preventDefault();
-            const email = document.getElementById('login-email').value.trim();
+            const email = document.getElementById('login-email').value;
             const password = document.getElementById('login-password').value;
             const errorEl = document.getElementById('auth-error');
             const loginBtn = document.getElementById('login-btn');
-            
-            errorEl.innerText = '';
+
             loginBtn.disabled = true;
             loginBtn.innerText = 'กำลังตรวจสอบ...';
+            errorEl.innerText = '';
 
-            try {
-                const client = initSupabase();
-                if (!client) {
-                    throw new Error('ระบบไม่สามารถเชื่อมต่อ Supabase SDK ได้ กรุณารีเฟรชหน้าเว็บ');
-                }
+            const { error } = await sbClient.auth.signInWithPassword({ email, password });
 
-                const { data, error } = await client.auth.signInWithPassword({ email, password });
-                
-                if (error) {
-                    console.error('Login Failed:', error);
-                    errorEl.innerText = 'เข้าสู่ระบบไม่สำเร็จ: ' + (error.message || 'อีเมลหรือรหัสผ่านไม่ถูกต้อง');
-                    loginBtn.disabled = false;
-                    loginBtn.innerText = 'เข้าสู่ระบบ';
-                    return;
-                }
-
-                loginBtn.innerText = 'สำเร็จ!';
-                await checkUser();
-
-            } catch (err) {
-                console.error('Unexpected Login Error:', err);
-                errorEl.innerText = 'เกิดข้อผิดพลาด: ' + err.message;
-            } finally {
+            if (error) {
+                errorEl.innerText = 'อีเมลหรือรหัสผ่านไม่ถูกต้อง';
                 loginBtn.disabled = false;
-                if (loginBtn.innerText !== 'สำเร็จ!') {
-                    loginBtn.innerText = 'เข้าสู่ระบบ';
-                }
-            }
-        }
-
-        async function handleLogout() {
-            if (confirm('คุณต้องการออกจากระบบใช่หรือไม่?')) {
-                const client = initSupabase();
-                if (client) await client.auth.signOut();
+                loginBtn.innerText = 'เข้าสู่ระบบ';
+            } else {
                 checkUser();
             }
         }
 
-        async function fetchTransactions() {
-            const client = initSupabase();
-            if (!client) return;
+        async function handleLogout() {
+            await sbClient.auth.signOut();
+            checkUser();
+        }
 
+        async function fetchTransactions() {
             const selectedMonth = document.getElementById('filter-month').value;
             const selectedYear = document.getElementById('filter-year').value;
-            
-            let query = client.from('transactions').select('*').order('transaction_date', { ascending: false });
+
+            let query = sbClient.from('transactions').select('*').order('transaction_date', { ascending: false });
 
             if (selectedYear !== 'all' && selectedMonth !== 'all') {
                 const startDate = `${selectedYear}-${selectedMonth}-01`;
@@ -286,18 +246,181 @@
 
             const { data, error } = await query;
             if (error) {
-                console.error('Fetch error:', error);
-                alert('ไม่สามารถดึงข้อมูลได้: ' + error.message);
+                console.error('Error fetching data:', error);
                 return;
             }
-            renderDashboard(data || []);
+
+            renderDashboard(data);
         }
 
         function renderDashboard(transactions) {
             const listEl = document.getElementById('transaction-list');
             listEl.innerHTML = '';
+
             let totalIncome = 0;
             let totalExpense = 0;
             let totalRecurring = 0;
 
-         
+            transactions.forEach(item => {
+                const isIncome = item.type === 'income';
+                const isRecurring = item.type === 'recurring';
+                const amountClass = isIncome ? 'text-emerald-600' : 'text-rose-600';
+                const prefix = isIncome ? '+' : '-';
+                
+                if (isIncome) {
+                    totalIncome += Number(item.amount);
+                } else if (isRecurring) {
+                    totalRecurring += Number(item.amount);
+                    totalExpense += Number(item.amount);
+                } else {
+                    totalExpense += Number(item.amount);
+                }
+
+                const typeLabels = {
+                    income: '<span class="bg-emerald-50 text-emerald-600 px-2.5 py-1 rounded-lg text-[10px] font-semibold">รายรับ</span>',
+                    expense: '<span class="bg-rose-50 text-rose-600 px-2.5 py-1 rounded-lg text-[10px] font-semibold">รายจ่าย</span>',
+                    recurring: '<span class="bg-amber-50 text-amber-600 px-2.5 py-1 rounded-lg text-[10px] font-semibold">รายเดือน</span>'
+                };
+
+                const row = `
+                    <tr class="hover:bg-slate-50/80 transition">
+                        <td class="py-3 text-slate-400">${item.transaction_date}</td>
+                        <td class="py-3 font-medium text-slate-700">${item.description}</td>
+                        <td class="py-3">${typeLabels[item.type]}</td>
+                        <td class="py-3 text-right font-bold ${amountClass}">${prefix}${Number(item.amount).toLocaleString('th-TH', {minimumFractionDigits: 2})}</td>
+                        <td class="py-3 text-center">
+                            <button onclick="editTransaction('${item.id}', '${item.type}', '${item.description}', ${item.amount}, '${item.transaction_date}')" class="text-indigo-600 hover:text-indigo-900 bg-indigo-50 hover:bg-indigo-100 px-2.5 py-1 rounded-lg text-[11px] font-medium transition">แก้ไข</button>
+                        </td>
+                    </tr>
+                `;
+                listEl.innerHTML += row;
+            });
+
+            if (transactions.length === 0) {
+                listEl.innerHTML = `<tr><td colspan="5" class="text-center py-8 text-slate-400">ยังไม่มีข้อมูลในระบบช่วงเวลานี้</td></tr>`;
+            }
+
+            document.getElementById('total-income').innerText = totalIncome.toLocaleString('th-TH', {minimumFractionDigits: 2}) + ' บาท';
+            document.getElementById('total-expense').innerText = totalExpense.toLocaleString('th-TH', {minimumFractionDigits: 2}) + ' บาท';
+            
+            const net = totalIncome - totalExpense;
+            const netEl = document.getElementById('net-balance');
+            netEl.innerText = net.toLocaleString('th-TH', {minimumFractionDigits: 2}) + ' บาท';
+            netEl.className = `text-2xl font-bold mt-1 ${net >= 0 ? 'text-slate-900' : 'text-rose-600'}`;
+            
+            document.getElementById('item-count').innerText = `พบ ${transactions.length} รายการ`;
+
+            updateChart(totalIncome, totalExpense - totalRecurring, totalRecurring);
+        }
+
+        function updateChart(income, expense, recurring) {
+            const ctx = document.getElementById('financeChart').getContext('2d');
+            
+            if (financeChart) {
+                financeChart.destroy();
+            }
+
+            financeChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['รายรับรวม', 'รายจ่ายทั่วไป', 'ค่าใช้จ่ายรายเดือน'],
+                    datasets: [{
+                        data: [income, expense, recurring],
+                        backgroundColor: ['#10b981', '#f43f5e', '#f59e0b'],
+                        borderWidth: 0,
+                        hoverOffset: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                font: { family: 'Prompt', size: 12 },
+                                usePointStyle: true,
+                                padding: 20
+                            }
+                        }
+                    },
+                    cutout: '70%'
+                }
+            });
+        }
+
+        // นำข้อมูลเข้าฟอร์มเพื่อเตรียมแก้ไข
+        function editTransaction(id, type, description, amount, date) {
+            document.getElementById('edit-id').value = id;
+            document.getElementById('type').value = type;
+            document.getElementById('description').value = description;
+            document.getElementById('amount').value = amount;
+            document.getElementById('date').value = date;
+
+            document.getElementById('form-title').innerText = '✏️ แก้ไขรายการ';
+            document.getElementById('submit-btn').innerText = 'บันทึกการแก้ไข';
+            document.getElementById('submit-btn').classList.replace('bg-indigo-600', 'bg-amber-600');
+            document.getElementById('submit-btn').classList.replace('hover:bg-indigo-700', 'hover:bg-amber-700');
+            document.getElementById('cancel-edit-btn').classList.remove('hidden');
+
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // รีเซ็ตฟอร์มกลับเป็นโหมดเพิ่มใหม่
+        function resetForm() {
+            document.getElementById('transaction-form').reset();
+            document.getElementById('edit-id').value = '';
+            document.getElementById('form-title').innerText = '➕ เพิ่มรายการใหม่';
+            document.getElementById('submit-btn').innerText = 'บันทึกข้อมูล';
+            document.getElementById('submit-btn').classList.replace('bg-amber-600', 'bg-indigo-600');
+            document.getElementById('submit-btn').classList.replace('hover:bg-amber-700', 'hover:bg-indigo-700');
+            document.getElementById('cancel-edit-btn').classList.add('hidden');
+            
+            const now = new Date();
+            document.getElementById('date').valueAsDate = now;
+        }
+
+        // บันทึกข้อมูล (รองรับทั้งเพิ่มใหม่และอัปเดต)
+        async function saveTransaction(e) {
+            e.preventDefault();
+            
+            const submitBtn = document.getElementById('submit-btn');
+            const editId = document.getElementById('edit-id').value;
+            
+            submitBtn.disabled = true;
+            submitBtn.innerText = 'กำลังบันทึก...';
+
+            const itemData = {
+                type: document.getElementById('type').value,
+                description: document.getElementById('description').value,
+                amount: parseFloat(document.getElementById('amount').value),
+                transaction_date: document.getElementById('date').value
+            };
+
+            let error;
+
+            if (editId) {
+                // อัปเดตรายการเดิม
+                const res = await sbClient.from('transactions').update(itemData).eq('id', editId);
+                error = res.error;
+            } else {
+                // เพิ่มรายการใหม่
+                const res = await sbClient.from('transactions').insert([itemData]);
+                error = res.error;
+            }
+
+            if (error) {
+                console.error('Error saving data:', error);
+                alert('เกิดข้อผิดพลาดในการบันทึกข้อมูล: ' + error.message);
+            } else {
+                resetForm();
+                fetchTransactions();
+            }
+
+            submitBtn.disabled = false;
+        }
+
+        checkUser();
+    </script>
+</body>
+</html>
