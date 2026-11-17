@@ -157,6 +157,10 @@
                         <label for="date" class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">วันที่</label>
                         <input type="date" id="date" required class="w-full rounded-2xl border border-slate-200 bg-slate-50/50 p-3 text-xs text-slate-700 focus:outline-none focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 transition-all duration-300">
                     </div>
+                    <div>
+                        <label for="due_date" class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">วันครบกำหนดชำระ (ถ้ามี)</label>
+                        <input type="date" id="due_date" class="w-full rounded-2xl border border-slate-200 bg-slate-50/50 p-3 text-xs text-slate-700 focus:outline-none focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 transition-all duration-300">
+                    </div>
                     <p id="form-error" class="text-rose-600 text-xs font-medium hidden"></p>
                     <button type="submit" id="submit-btn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3.5 rounded-2xl shadow-lg shadow-indigo-100 hover:shadow-indigo-200 hover:-translate-y-0.5 transition-all duration-300 text-xs mt-3 cursor-pointer">
                         บันทึกข้อมูล
@@ -407,10 +411,20 @@
                 const safeId = escapeHtml(item.id);
                 const badgeHtml = typeLabels[item.type] || typeLabels.expense;
 
+                // ตรวจสอบวันครบกำหนดชำระ
+                let dueHtml = '';
+                if (item.due_date) {
+                    const safeDueDate = escapeHtml(item.due_date);
+                    dueHtml = `<div class="text-[10px] text-amber-600 mt-1 flex items-center gap-1 font-medium bg-amber-50 w-fit px-1.5 py-0.5 rounded border border-amber-100">📅 ครบกำหนด: ${safeDueDate}</div>`;
+                }
+
                 const row = `
                     <tr class="hover:bg-slate-50/80 transition">
                         <td class="py-3 text-slate-400">${safeDate}</td>
-                        <td class="py-3 font-medium text-slate-700">${safeDesc}</td>
+                        <td class="py-3">
+                            <div class="font-medium text-slate-700">${safeDesc}</div>
+                            ${dueHtml}
+                        </td>
                         <td class="py-3">${badgeHtml}</td>
                         <td class="py-3 text-right font-bold ${amountClass}">${prefix}${amountNum.toLocaleString('th-TH', { minimumFractionDigits: 2 })}</td>
                         <td class="py-3 text-center">
@@ -516,15 +530,16 @@
         function editTransactionById(id) {
             const item = currentTransactions.find(t => String(t.id) === String(id));
             if (!item) return;
-            editTransaction(item.id, item.type, item.description, item.amount, item.transaction_date);
+            editTransaction(item.id, item.type, item.description, item.amount, item.transaction_date, item.due_date);
         }
 
-        function editTransaction(id, type, description, amount, date) {
+        function editTransaction(id, type, description, amount, date, due_date) {
             document.getElementById('edit-id').value = id;
             document.getElementById('type').value = type;
             document.getElementById('description').value = description;
             document.getElementById('amount').value = amount;
             document.getElementById('date').value = date;
+            document.getElementById('due_date').value = due_date || '';
 
             document.getElementById('form-icon').innerText = '✏️';
             document.getElementById('form-title-text').innerText = 'แก้ไขรายการ';
@@ -587,6 +602,7 @@
 
             const now = new Date();
             document.getElementById('date').valueAsDate = now;
+            document.getElementById('due_date').value = '';
         }
 
         // บันทึกข้อมูล (รองรับทั้งเพิ่มใหม่และอัปเดต)
@@ -607,6 +623,7 @@
                 description: document.getElementById('description').value.trim(),
                 amount: parseFloat(document.getElementById('amount').value),
                 transaction_date: document.getElementById('date').value,
+                due_date: document.getElementById('due_date').value || null,
                 user_id: currentUser.id // ผูกข้อมูลธุรกรรมกับสิทธิ์ผู้ใช้
             };
 
@@ -626,7 +643,11 @@
 
             if (error) {
                 console.error('Error saving data:', error);
-                formError.innerText = 'เกิดข้อผิดพลาดในการบันทึกข้อมูล: ' + error.message;
+                let errMsg = 'เกิดข้อผิดพลาดในการบันทึกข้อมูล: ' + error.message;
+                if (error.message.includes('due_date') || (error.details && error.details.includes('due_date'))) {
+                    errMsg += ' (คำแนะนำ: ตาราง transactions ในระบบ Supabase ของคุณอาจยังไม่มีคอลัมน์ due_date กรุณาเข้าไปเพิ่มคอลัมน์ชื่อ due_date ประเภท Date ในตาราง transactions บนเว็บไซต์ Supabase ของคุณ)';
+                }
+                formError.innerText = errMsg;
                 formError.classList.remove('hidden');
                 submitBtn.innerText = editId ? 'บันทึกการแก้ไข' : 'บันทึกข้อมูล';
             } else {
